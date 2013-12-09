@@ -7,12 +7,23 @@
   :author "Oleg Sivokon <olegsivokon@gmail.com>"
   :license "MIT"
   :depends-on (:alexandria :split-sequence :iterate)
-  :components ((:module "src"
-                        :serial t
-                        :components
-                        ((:file "package")
-                         (:file "solver" :depends-on ("package")))))
-  :description "A toy project for solving Sudoku 9x9 puzzles"
+  :components ((:module
+                "src" :serial t
+                :components
+                ((:module
+                  "openrdf" :serial t
+                  :components
+                  ((:module
+                    "model" :serial t
+                    :components
+                    ((:file "package")
+                     (:file "value" :depends-on ("package"))))
+                   (:module
+                    "util" :serial t
+                    :components
+                    ((:file "package")
+                     (:file "utils" :depends-on ("package")))))))))
+  :description "Port of Franz' client for AllegroGraph database"
   :long-description
   #.(with-open-file
         (stream (merge-pathnames
