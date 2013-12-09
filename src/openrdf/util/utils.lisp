@@ -126,13 +126,20 @@ def asURIString(value):
              (char->unicode-codepoint c)))) stream))))
 
 (defun local-name-index (uri)
-  )
+  (iter
+    (initially (setq index -1))
+    (for needle :in '(#\# #\/ #\:))
+    (for index :next (when (< index 0) (position needle uri)))
+    (finally
+     (if (< index 0)
+         (error "No separator found in URI '%s'" uri)
+         (return (1+ index))))))
 
 (defun ensure-uri-string (value)
   (if (char= (char value 0) #\<) value (format nil "<~a>" value)))
 
 (defun local-name (uri)
-  )
+  (subseq uri (local-name-index uri)))
 
 (defun namespace (uri)
-  )
+  (subseq uri 0 (local-name-index uri)))

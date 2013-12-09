@@ -4,9 +4,11 @@
 
 (defsystem agraph-client
   :version "0.1"
-  :author "Oleg Sivokon <olegsivokon@gmail.com>"
-  :license "MIT"
-  :depends-on (:alexandria :split-sequence :iterate)
+  :author "Oleg Sivokon <olegsivokon@gmail.com>,
+           derived from Python source written by Franz Inc.
+           <http://www.franz.com/agraph/allegrograph/>"
+  :license "EPL"
+  :depends-on (:alexandria :split-sequence :iterate :local-time)
   :components ((:module
                 "src" :serial t
                 :components
@@ -14,15 +16,21 @@
                   "openrdf" :serial t
                   :components
                   ((:module
-                    "model" :serial t
-                    :components
-                    ((:file "package")
-                     (:file "value" :depends-on ("package"))))
-                   (:module
                     "util" :serial t
                     :components
                     ((:file "package")
-                     (:file "utils" :depends-on ("package")))))))))
+                     (:file "utils" :depends-on ("package"))))
+                   (:module
+                    "model" :serial t :depends-on ("util")
+                    :components
+                    ((:file "package")
+                     (:file "value" :depends-on ("package"))
+                     (:file "literal" :depends-on ("package" "value"))))
+                   (:module
+                    "vocabulary" :serial t :depends-on ("model")
+                    :components
+                    ((:file "package")
+                     (:file "xmlschema" :depends-on ("package")))))))))
   :description "Port of Franz' client for AllegroGraph database"
   :long-description
   #.(with-open-file
@@ -42,7 +50,7 @@
 (defsystem :agraph-client-test
   :author "Oleg Sivokon <olegsivokon@gmail.com>"
   :description "Minimal test suite for testing agraph-client"
-  :license "MIT"
+  :license "EPL"
   :depends-on (:agraph-client :fiveam)
   :components ((:module "tests"
                         :serial t

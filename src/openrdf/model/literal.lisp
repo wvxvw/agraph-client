@@ -1,51 +1,33 @@
-# -*- coding: utf-8 -*-
+;; -*- coding: utf-8 -*-
 
-import datetime
-from collections import defaultdict
-from copy import copy
+(in-package :openrdf.model)
 
+;; This is ugly, maybe there's some way to sidestep this with `eval-when'
+(defun voc (symbol)
+  (symbol-value (find-symbol symbol :openrdf.vocabulary)))
 
-def datatype_from_python(value, datatype):
-    """
-    If 'value' is not a string, convert it into one, and infer its
-    datatype, unless 'datatype' is set (i.e., overrides it).
-    """
-    if isinstance(value, str):
-        return value, datatype
+(defun datatype-from-python (value datatype)
+  ;; this translation is all messed up, but will do for the time being
+  ;; some date-related noise has been dropped, I don't understand how it
+  ;; can be relevant.
+  (typecase value
+    (string (values value datatype))
+    (boolean (values (if value "true" "false") (voc '+boolean+)))
+    (bignum (values (write-to-string value) (voc '+long+)))
+    (fixnum (values (write-to-string value) (voc '+integer+)))
+    (float (values (write-to-string value) (voc '+double+)))
+    (timestamp (values (format-timestring nil value) (voc '+datetime+)))
+    (otherwise (values (write-to-string value) datatype))))
 
-    ## careful: test for 'bool' must precede test for 'int':
-    if isinstance(value, bool):
-        return unicode(value).lower(), datatype or XMLSchema.BOOLEAN
+(defclass literal (value)
+  ((label :initarg :label :accessor literal-label)
+   (datatype :initform nil :initarg :datatype :accessor literal-datatype)
+   (language :initform nil :initarg :language :accessor literal-language)))
 
-    if isinstance(value, long):
-        return unicode(value), datatype or XMLSchema.INTEGER
+(defmethod (setf literal-datatype) (value (this literal))
+  (setf (slot-value this 'datatype) (ensure-uri value)))
 
-    if isinstance(value, int):
-        return unicode(value), datatype or XMLSchema.LONG
-
-    if isinstance(value, float):
-        return unicode(value), datatype or XMLSchema.DOUBLE
-
-    if isinstance(value, datetime.datetime):
-        if value.utcoffset() is not None:
-            value = copy(value)
-            value = value.replace(tzinfo=None) - value.utcoffset()
-        str_value = value.isoformat() + 'Z'
-        return str_value, datatype or XMLSchema.DATETIME
-
-    if isinstance(value, datetime.time):
-        if value.utcoffset() is not None:
-            value = copy(value)
-            value = value.replace(tzinfo=None) - value.utcoffset()
-        str_value = value.isoformat() + 'Z'
-        return str_value, datatype or XMLSchema.TIME
-
-    if isinstance(value, datetime.date):
-        return value.isoformat(), datatype or XMLSchema.DATE
-
-    return unicode(value), datatype
-
-
+#|
 class Literal(Value):
     """
     Implementation of the Literal class.
@@ -456,3 +438,4 @@ _parse_iso.parser = re.compile("""
     )?
     $
 """, re.X) # """
+|#

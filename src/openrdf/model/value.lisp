@@ -9,7 +9,9 @@
 ;; All this string parsing nonsense looks bad, why not have
 ;; a uri struct to encode all parts?
 (defclass uri (resource)
-  ((value :initform nil :initarg :value :accessor uri-value)))
+  ((value :initform nil :initarg :value
+          :accessor uri-value :type (or null string)))
+  (:default-initargs :uri nil))
 
 (defclass bnode (resource)
   ((id :initform nil :initarg :id :accessor bnode-id)))
@@ -51,3 +53,17 @@
 (defgeneric get-namespace (uri)
   (:documentation "")
   (:method ((this uri)) (openrdf.utils:namespace (uri-value this))))
+
+(defmethod initialize-instance :after
+    ((this uri) &rest initargs
+     &key lambda-list argument-precence-order &allow-other-keys)
+  (declare (ignore lambda-list argument-precence-order))
+  (destructuring-bind (&key value &allow-other-keys) initargs
+    (when (and value
+               (char= (char value 0) #\<)
+               (char= (char value (1- (length value))) #\>))
+      (setf (uri-value this) (subseq value 1 (1- (length value)))))))
+
+(defun ensure-uri (maybe-uri)
+  (if (typep maybe-uri 'uri) maybe-uri
+      (make-instance 'uri :value maybe-uri)))
