@@ -102,10 +102,6 @@ def asURIString(value):
 
 (in-package :openrdf.utils)
 
-(defun char->unicode-codepoint (char)
-  (let ((hex (format nil "~x" (char-code char))))
-    (replace (copy-seq "\\u0000") hex :start1 (- 6 (length hex)))))
-
 (defun encode-ntriple-string (string)
   (with-output-to-string (stream)
     (iter
@@ -123,7 +119,8 @@ def asURIString(value):
                   (char<= c #\~)
                   (not (char= c #\')))
              (make-string 1 :initial-element c)
-             (char->unicode-codepoint c)))) stream))))
+             (format nil "\\u~4,'0x" (char-code char)))))
+      stream))))
 
 (defun local-name-index (uri)
   (iter

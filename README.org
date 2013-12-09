@@ -1,7 +1,7 @@
 * Disclaimer
   This code is a derivative work. The original code was written by
   Fraz Inc.  The original sources and further information can be
-  downloaded from here:
+  found here:
   http://www.franz.com/agraph/allegrograph/
   The original source code was licensed under Eclipse Public
   License, and this explains my choice of the license.

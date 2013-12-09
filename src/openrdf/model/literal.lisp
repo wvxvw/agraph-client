@@ -27,134 +27,85 @@
 (defmethod (setf literal-datatype) (value (this literal))
   (setf (slot-value this 'datatype) (ensure-uri value)))
 
+(defmethod value= ((this literal) (that literal))
+  (with-slots ((label-a label) (datatype-a datatype) (language-a language)) this
+    (with-slots ((label-b label) (datatype-b datatype) (language-b language)) this
+      (and (eqal label-a label-b)
+           (eqal datatype-a datatype-b)
+           (eqal language-a language-b)))))
+
+(defmethod int-value ((this literal))
+  (truncate (coerce (literal-label this) 'integer) #xffffffff))
+
+(defmethod long-value ((this literal))
+  (truncate (coerce (literal-label this) 'integer) #xffffffffffffffff))
+
+(defmethod float-value ((this literal))
+  (coerce (literal-label this) 'float))
+
+(defmethod boolean-value ((this literal))
+  (coerce (literal-label this) 'boolean))
+
+(defmethod date-value ((this literal))
+  (parse-timestring (coerce (literal-label this) 'string)))
+
+(defmethod ntriples ((this literal))
+  (format nil "\"~a\"~@[@~a~]~@[~@*^^~a~]"
+          (openrdf.utils:encode-ntriple-string (literal-label this))
+          (literal-language this)
+          (ntriples (literal-datatype this))))
+
+;; no idea why, this should be the choice of the compound-literal...
+(defparameter +range-literal+ "rangeLiteral")
+
+(defclass compound-literal (literal)
+  ((choice :initarg :choice :accessor compound-literal-choice :type string)
+   (lower-bound :initform nil :initarg :lower-bound :type literal-impl
+                :accessor compound-literal-lower-bound)
+   (upper-bound :initform nil :initarg :upper-bound :type literal-impl
+                :accessor compound-literal-upper-bound)))
+
+(defmethod range-literal-p ((this compound-literal))
+  (string= (compound-literal-choice this) +range-literal+))
+
+;; The original code extends this from compound-literal, but it doesn
+;; make sense to do so...
+(defclass range-literal (literal)
+  ((lower-bound :initform nil :initarg :lower-bound :type literal-impl
+                :accessor range-literal-lower-bound)
+   (upper-bound :initform nil :initarg :upper-bound :type literal-impl
+                :accessor range-literal-upper-bound)))
+
+(defun geounitp (value) (member value '(:km :mile :radian :degree)))
+
+(deftype geounit () '(satisfies geounitp))
+
+(defclass geo-coordinate (compound-literal)
+  ((x :initarg :x :accessor geo-coordinate-x)
+   (y :initarg :y :accessor geo-coordinate-y)
+   (unit :initform nil :initarg :unit :type geounit
+                :accessor geo-coordinate-unit)
+   (geo-type :initform nil :initarg :geo-type
+                :accessor geo-coordinate-type)))
+
+(defmethod print-object ((this geo-coordinate) stream)
+  (with-slots (x y) this (format stream  "|COOR|(~d, ~d)" % x y)))
+
+(defclass geo-spatial-region (compound-literal) ())
+
+;; unit and geo-type are duplicated from `geo-coordinate' wtf?
+(defclass geo-box (geo-spatial-region)
+  ((x-min :initarg :x-min :accessor geo-spatial-region-x-min)
+   (x-max :initarg :x-max :accessor geo-spatial-region-x-max)
+   (y-max :initarg :y-max :accessor geo-spatial-region-y-max)
+   (y-min :initarg :y-min :accessor geo-spatial-region-y-min)
+   (unit :initform nil :initarg :unit :type geounit
+                :accessor geo-coordinate-unit)
+   (geo-type :initform nil :initarg :geo-type
+                :accessor geo-coordinate-type)))
+
 #|
-class Literal(Value):
-    """
-    Implementation of the Literal class.
-    """
     
-    def __init__(self, label, datatype=None, language=None):
-        Value.__init__(self)
-        
-        # Uses the properties to set the real values
-        self.label, self.datatype = datatype_from_python(label, datatype)
-        self.language = language
-
-    def getDatatype(self):
-        """The URI representing the datatype for this literal, if there is one""" 
-        return self._datatype
-    
-    def setDatatype(self, datatype):
-        """Sets the datatype of the value"""
-        if isinstance(datatype, str):
-            if datatype[0] == '<':
-                datatype = datatype[1:-1]
-            datatype = XMLSchema.uristr2obj.get(datatype, None) or URI(datatype)
-        elif datatype is not None:
-            if not isinstance(datatype, URI):
-                datatype = URI(datatype)
-            elif datatype.uri is None:
-                datatype = None
-
-        self._datatype = datatype # pylint: disable-msg=W0201
-
-    datatype = property(getDatatype, setDatatype)
-
-    def getLanguage(self):
-        """The language for this Literal"""
-        return self._language
-    
-    def setLanguage(self, language):
-        """Set the language for this Literal"""
-        self._language = language.lower() if language else None # pylint: disable-msg=W0201
-
-    language = property(getLanguage, setLanguage)
-
-    def getLabel(self):
-        """The label/value for this Literal"""
-        return self._label
-    
-    def setLabel(self, label):
-        """Set the label for this Literal"""
-        self._label = label # pylint: disable-msg=W0201
-    
-    def getValue(self):
-        """The label/value"""
-        return self.label
-
-    label = property(getLabel, setLabel)
-    
-    def __eq__(self, other):
-        if not isinstance(other, Literal):
-            return NotImplemented
-
-        return (self.label == other.label and 
-                self.datatype == other.datatype and
-                self.language == other.language)
-    
-    def __hash__(self):
-        return hash(self._label)
-    
-    def intValue(self):
-        """Convert to int"""
-        return int(self._label)
-    
-    def longValue(self):
-        """Convert to long"""
-        return long(self._label)
-    
-    def floatValue(self):
-        """Convert to float"""
-        return float(self._label)
-    
-    def booleanValue(self):
-        """Convert to bool"""
-        return bool(self._label.capitalize())
-    
-    def dateValue(self):
-        """Convert to date"""
-        label = self._label
-        if label.endswith('Z'):
-            label = label[:-1]
-        return datetime.datetime.strptime(label, "%Y-%m-%d").date()
-
-    def datetimeValue(self):
-        """Convert to datetime"""
-        return _parse_iso(self._label)
-
-    def timeValue(self):
-        """Convert to time"""
-        # Making this easy by picking a someone arbitrary date (that had a leap second just in case)
-        # and reusing _parse_iso
-        return _parse_iso('2008-12-31T' + self._label).time()
-    
-    ## Returns the {@link XMLGregorianCalendar} value of this literal. A calendar
-    ## representation can be given for literals whose label conforms to the
-    ## syntax of the following <a href="http://www.w3.org/TR/xmlschema-2/">XML
-    ## Schema datatypes</a>: <tt>dateTime</tt>, <tt>time</tt>,
-    ## <tt>date</tt>, <tt>gYearMonth</tt>, <tt>gMonthDay</tt>,
-    ## <tt>gYear</tt>, <tt>gMonth</tt> or <tt>gDay</tt>.
-    def calendarValue(self):
-        """calendarValue not useful for Python."""
-        raise NotImplementedError("calendarValue")
-
-    def toNTriples(self):
-        """
-        Return an NTriples representation for this Literal.
-        """
-        sb = []
-        sb.append('"')
-        sb.append(strings.encode_ntriple_string(self.getLabel()))
-        sb.append('"')
-        if self.language:
-            sb.append('@')
-            sb.append(self.language)
-        if self.datatype:
-            sb.append("^^")
-            sb.append(self.datatype.toNTriples())
-        return ''.join(sb)
-
-
 ###############################################################################
 ## Automatic conversion from Literal to Python object
 ###############################################################################
@@ -184,44 +135,8 @@ XSDToPython = defaultdict(lambda: Literal.getValue, [
 ###############################################################################
 
 class CompoundLiteral(Literal):
-    """
-    A compound literal represents a range, a geospatial coordinate,
-    or other useful compound structure.
-    TODO: FIGURE OUT SYNTAX FOR OTHER TYPES. INSURE THAT
-    THE SYNTAX FOR A RANGE DOESN'T CONFLICT/OVERLAP
-    """
-    RANGE_LITERAL = 'rangeLiteral'
-    def __init__(self, choice, lowerBound=None, upperBound=None):
-        self.choice = choice
-        if choice == CompoundLiteral.RANGE_LITERAL:
-            self.lowerBound = lowerBound # should be a LiteralImpl
-            self.upperBound = upperBound # should be a LiteralImpl
-        ## other compound types go here.
-        else:
-            raise IllegalArgumentException("Can't interpret the choice '%s' of a compound literal." % choice)
-    
-    def isRangeLiteral(self):
-        return self.choice == CompoundLiteral.RANGE_LITERAL
-    
-    def getLowerBound(self):
-        return self.lowerBound
-    
-    def getUpperBound(self):
-        return self.upperBound
     
 class RangeLiteral(CompoundLiteral):
-    """
-    A range represents an interval between to scalar values.
-    """
-    def __init__(self, lowerBound=None, upperBound=None):
-        self.lowerBound = lowerBound # should be a LiteralImpl
-        self.upperBound = upperBound # should be a LiteralImpl
-    
-    def getLowerBound(self):
-        return self.lowerBound
-    
-    def getUpperBound(self):
-        return self.upperBound
 
 class GeoCoordinate(CompoundLiteral):
     """
