@@ -25,7 +25,8 @@
                     :components
                     ((:file "package")
                      (:file "value" :depends-on ("package"))
-                     (:file "literal" :depends-on ("package" "value"))))
+                     (:file "literal" :depends-on ("package" "value"))
+                     (:file "statement" :depends-on ("package" "value"))))
                    (:module
                     "vocabulary" :serial t :depends-on ("model")
                     :components
