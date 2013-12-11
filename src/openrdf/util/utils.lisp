@@ -140,3 +140,25 @@ def asURIString(value):
 
 (defun namespace (uri)
   (subseq uri 0 (local-name-index uri)))
+
+(defparameter *uri-scanner*
+  (create-scanner "^<([^:]+:[^\s\"<>]+)>$" :single-line-mode t))
+
+(defparameter *nodeid-scanner*
+  (create-scanner "^_:([A-Za-z][A-Za-z0-9]*)$" :single-line-mode t))
+
+;; Not sure if this is intended: you cannot specify both language and uri
+(defparameter *literal-scanner*
+  (create-scanner
+   "^\"([^\"\\\\]*(?:\\.[^\"\\\\]*)*)\"(?:@([a-z]+(?:-[a-z0-9]+)*)|\\^\\^<([^:]+:[^\\s\"<>]+)>)?$"
+   :single-line-mode t))
+
+(defun parse-uriref (maybe-uri)
+  (nth-value 1 (scan-to-strings *uri-scanner* maybe-uri)))
+
+(defun parse-nodeid (maybe-nodeid)
+  (nth-value 1 (scan-to-strings *nodeid-scanner* maybe-nodeid)))
+
+(defun parse-literal (maybe-literal)
+  (let ((groups (nth-value 1 (scan-to-strings *literal-scanner* maybe-literal))))
+    (and groups (values (aref groups 0) (aref groups 1) (aref groups 2)))))

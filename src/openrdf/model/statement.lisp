@@ -37,3 +37,43 @@
   (unless (slot-value this 'statement-object)
     (setf (statement-object this) (first (statement-tuple this))))
   (slot-value this 'statement-object))
+
+(defmethod statement-subject ((this statement))
+  (unless (slot-value this 'statement-subject)
+    (setf (statement-subject this) (second (statement-tuple this))))
+  (slot-value this 'statement-subject))
+
+(defmethod statement-predicate ((this statement))
+  (unless (slot-value this 'statement-predicate)
+    (setf (statement-predicate this) (third (statement-tuple this))))
+  (slot-value this 'statement-predicate))
+
+(defmethod statement-context ((this statement))
+  (unless (slot-value this 'statement-context)
+    (setf (statement-context this) (third (statement-tuple this))))
+  (slot-value this 'statement-context))
+
+(defmethod statement-id ((this statement))
+  (let ((id (fourth (statement-tuple this))))
+    (if id (parse-integer id) -1)))
+
+(defmethod nth-component ((this statement) (n integer))
+  (nth n (statement-tuple this)))
+
+(defun make-uri (uri) (make-instance 'uri :value uri))
+
+(defun make-literal (label &optional datatype language)
+  (make-instance 'literal :label label :datatype datatype :language language))
+
+(defun make-bnode (id) (make-instance 'bnode :id id))
+
+(defun string->term (string)
+  (iter
+    (for (parser . constructor) :in
+         `((null . ,(constantly nil))
+           (openrdf.utils:parse-uriref . make-uri)
+           (openrdf.utils:parse-literal . make-literal)
+           (openrdf.utils:parse-nodeid . make-bnode)))
+    (for parsed := (funcall parser string))
+    (when parsed (return (apply constructor parsed)))
+    (finally (return (make-literal string)))))

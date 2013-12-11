@@ -1,5 +1,5 @@
 (in-package :cl)
-(defpackage :openrdf.model (:use :cl :local-time)
+(defpackage :openrdf.model (:use :cl :local-time :iterate)
             (:export :value
                      :resource
                      :uri

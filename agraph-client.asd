@@ -8,7 +8,7 @@
            derived from Python source written by Franz Inc.
            <http://www.franz.com/agraph/allegrograph/>"
   :license "EPL"
-  :depends-on (:alexandria :split-sequence :iterate :local-time)
+  :depends-on (:alexandria :cl-ppcre :iterate :local-time)
   :components ((:module
                 "src" :serial t
                 :components
