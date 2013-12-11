@@ -8,7 +8,7 @@
            derived from Python source written by Franz Inc.
            <http://www.franz.com/agraph/allegrograph/>"
   :license "EPL"
-  :depends-on (:alexandria :cl-ppcre :iterate :local-time)
+  :depends-on (:alexandria :cl-ppcre :iterate :local-time :cl-containers)
   :components ((:module
                 "src" :serial t
                 :components
@@ -21,12 +21,18 @@
                     ((:file "package")
                      (:file "utils" :depends-on ("package"))))
                    (:module
+                    "query" :serial t
+                    :components
+                    ((:file "package")
+                     (:file "dataset" :depends-on ("package"))))
+                   (:module
                     "model" :serial t :depends-on ("util")
                     :components
                     ((:file "package")
                      (:file "value" :depends-on ("package"))
-                     (:file "literal" :depends-on ("package" "value"))
-                     (:file "statement" :depends-on ("package" "value"))))
+                     (:file "literal" :depends-on ("value"))
+                     (:file "statement" :depends-on ("value"))
+                     (:file "valuefactory" :depends-on ("statement"))))
                    (:module
                     "vocabulary" :serial t :depends-on ("model")
                     :components
