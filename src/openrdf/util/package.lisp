@@ -7,4 +7,5 @@
            :namespace
            :parse-uriref
            :parse-nodeid
-           :parse-literal))
+           :parse-literal
+           :ensure-array))

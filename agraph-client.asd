@@ -24,7 +24,9 @@
                     "query" :serial t
                     :components
                     ((:file "package")
-                     (:file "dataset" :depends-on ("package"))))
+                     (:file "dataset" :depends-on ("package"))
+                     (:file "queryresult" :depends-on ("dataset"))
+                     (:file "query" :depends-on ("queryresult"))))
                    (:module
                     "model" :serial t :depends-on ("util")
                     :components
